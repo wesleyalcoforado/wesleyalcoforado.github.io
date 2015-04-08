@@ -1,0 +1,17 @@
+---
+layout: layout
+---
+<section class="container">
+  <h1>
+    <a href="{{ page.url }}">{{ page.title }}</a>
+  </h1>
+
+  <section class="byline">
+  	<time datetime="{{ page.date }}">{{ page.date | date_to_string }}</time>
+  </section>
+
+  {{ content }}
+  <div class="pull"></div>
+  <hr>
+  {% include facebook.html %}
+</section>

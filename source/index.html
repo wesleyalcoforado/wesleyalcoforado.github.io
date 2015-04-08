@@ -1,0 +1,17 @@
+---
+layout: layout
+title: "Posts"
+---
+
+<section class="content">
+	<h1>Posts</h1>
+	<ul class="list-group">
+		{% for post in site.posts %}
+		<li class="list-group-item">
+		  <a href="{{ post.url }}">{{ post.title }}</a>
+		  <time datetime="{{ post.date }}" class="pull-right hidden-xs">{{ post.date | date: "%B %e, %Y" }}</time>
+		</li>
+		{% endfor %}
+	</ul>
+</section>
+

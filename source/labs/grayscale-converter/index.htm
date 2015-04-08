@@ -1,0 +1,175 @@
+---
+layout: layout
+title: "Grayscale converter"
+---
+<style type="text/css">
+	canvas, fieldset {
+		float: left;
+	}
+</style>
+
+<section class="content">
+	<h1>Grayscale converter</h1>
+	<canvas id="canvas1" width="512" height="512"></canvas>
+	<fieldset>
+		Converter:<br/>
+		<label><input type="radio" name="converter" value="Bit1">1 Bit</label><br/>
+		<label><input type="radio" name="converter" value="Bit2">2 Bit</label><br/>
+		<label><input type="radio" name="converter" value="Bit4">4 Bit</label><br/>
+		<label><input type="radio" name="converter" value="Bit8" checked="checked">8 Bit</label><br/><br/>
+
+		Filter:<br/>
+		<label><input type="radio" name="filter" value="Average">Average</label><br/>
+		<label><input type="radio" name="filter" value="Luma" checked="checked">Luma</label><br/>
+		<label><input type="radio" name="filter" value="Desaturation">Desaturation</label><br/><br/>
+		
+		Upload a picture:<br/>
+		<input type="file" id="picture">
+	</fieldset>
+</section>
+
+<script type="text/javascript">
+var GrayscaleApp = function(){
+	var app = function(imgUrl, canvasId, converterName, filterName){
+		var canvasElement = document.getElementById(canvasId);
+		this.canvas = canvasElement.getContext("2d");
+		this.width = canvasElement.width;
+		this.height = canvasElement.height;
+
+		this.setConverter(converterName);
+		this.setFilter(filterName);
+		this.setImage(imgUrl);
+	}
+	
+	app.prototype._paintImage = function(){
+		var w = this.width;
+		var h = this.height;
+		if(this._img.width > this._img.height){
+			h = this._img.height * this.width / this._img.width;
+		}else{
+			w = this._img.width * this.height / this._img.height;
+		}
+		this.canvas.drawImage(this._img, 0, 0, w, h);
+	}
+	
+	app.prototype._cleanCanvas = function(){
+		this.canvas.fillStyle = "white";
+		this.canvas.fillRect(0, 0, this.width, this.height);
+	}
+
+	app.prototype.reloadImage = function(){
+		this._cleanCanvas();
+		this._paintImage();
+	}
+
+	app.prototype.applyConverter = function(){
+		this.reloadImage();
+		var imageData = this.canvas.getImageData(0, 0, this.width, this.height);
+
+		for(y = 0; y < this.height; y++){
+			for(x = 0; x < this.width; x++){
+				var pixel = (x + y*this.width) * 4;
+				var r = imageData.data[pixel];
+				var g = imageData.data[pixel+1];
+				var b = imageData.data[pixel+2];
+
+				if(x > this.height / 2){
+					var gray = this.converterCallback(r, g, b, this.filterCallback);
+
+					imageData.data[pixel]   = gray;
+					imageData.data[pixel+1] = gray;
+					imageData.data[pixel+2] = gray;
+				}
+			}
+		}
+
+		this.canvas.putImageData(imageData, 0, 0);            
+	}
+	
+	app.prototype.setImage = function(imgUrl){
+		if(this._img == undefined){
+			this._img = new Image();
+			
+			var that = this;
+			this._img.onload  = function(){ 
+				that.applyConverter();
+			};
+		}
+	
+		this._img.src = imgUrl;
+	}
+
+	app.prototype.setConverter = function(converterName){
+		this.converterCallback = app.Converters[converterName];
+	}
+
+	app.prototype.setFilter = function(filterName){
+		this.filterCallback = app.Filters[filterName];
+	}
+
+	app.Filters = {
+		Luma: function(r, g, b){
+			return (r*0.3 + g*0.59 + b*0.11);
+		},
+
+		Average: function(r, g, b){
+			return (r+g+b)/3;
+		},
+
+		Desaturation: function(r, g, b){
+			return (Math.max(r, g, b) + Math.min(r, g, b)) / 2;
+		}
+	}
+
+	var bitPalette = function(r, g, b, filterCallback, numShades){
+		var conversionFactor = 255 / (numShades);
+		var color = filterCallback(r, g, b);
+
+		return Math.round((color / conversionFactor) + 0.5) * conversionFactor;
+	}
+
+	app.Converters = {
+		Bit1: function(r, g, b, filterCallback){
+			return bitPalette(r, g, b, filterCallback, 2);
+		},
+		Bit2: function(r, g, b, filterCallback){
+			return bitPalette(r, g, b, filterCallback, 4);
+		},
+		Bit4: function(r, g, b, filterCallback){
+			return bitPalette(r, g, b, filterCallback, 16);
+		},
+		Bit8: function(r, g, b, filterCallback){
+			return bitPalette(r, g, b, filterCallback, 256);
+		}
+	}
+
+	return app;
+}();
+
+$(document).ready(function(){
+	grayscaleApp = new GrayscaleApp('/img/labs/grayscale-converter/casa.png', 'canvas1', 'Bit8', 'Luma');
+	var convert = function(){
+		var filterName = $('input[name=filter]:checked').val();
+		var converterName = $('input[name=converter]:checked').val();
+
+		grayscaleApp.setConverter(converterName);
+		grayscaleApp.setFilter(filterName);
+		grayscaleApp.applyConverter();
+	};
+	$('input[type=radio]').click(convert);
+	convert();
+
+	$('#picture').on('change', function(){
+		var file = this.files[0];
+	
+		var reader = new FileReader();
+		reader.onloadend = function(){
+			grayscaleApp.setImage(this.result);
+		}
+		reader.readAsDataURL(file);
+	});
+
+
+
+});
+</script>  
